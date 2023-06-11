@@ -1,14 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
-
 import cv2
 import face_recognition
 import numpy as np
-
-img = cv2.imread('2.jpg')
-rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-img2 = cv2.imread('5.png')
-rgb2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
 
 
 # for box in boxes:
@@ -63,6 +57,6 @@ img = cv2.imdecode(np.fromfile("C:\\Users\\Асмодей\\Desktop\\img_recgn_te
 rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 for (x, y, w, h), name in res:
     cv2.rectangle(img, (h, w), (y, x), (0, 255, 0), 2)
-    cv2.putText(img, 'азаза', (h + 2, w + 20), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0, 255, 0), 2)
+    cv2.putText(img, name, (h + 2, w + 20), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0, 255, 0), 2)
 cv2.imshow("Frame", img)
 cv2.waitKey(0)
