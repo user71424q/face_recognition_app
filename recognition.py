@@ -38,8 +38,11 @@ def recognize_faces(check_img_path, database_folder_path):
                               cv2.IMREAD_UNCHANGED)
         db_img = cv2.cvtColor(db_bgr, cv2.COLOR_BGR2RGB)
         db_img_box = face_recognition.face_locations(db_img)
-        db_img_points = face_recognition.face_encodings(db_img, db_img_box)[0]
-
+        db_img_points = face_recognition.face_encodings(db_img, db_img_box)
+        if not db_img_points:
+            continue
+        else:
+            db_img_points = db_img_points[0]
         # массив True/False - результаты сравнения лица из БД с лицами на фото для проверки
         compare_res = face_recognition.compare_faces(check_img_points, db_img_points)
         for i in range(len(compare_res)):
@@ -49,14 +52,19 @@ def recognize_faces(check_img_path, database_folder_path):
 
     return result
 
+def getImage(imgPath, dirPath, show_unknown=False):
+    print(imgPath, dirPath, show_unknown, sep='\n')
+    res = recognize_faces(imgPath, dirPath)
+    img = cv2.imdecode(np.fromfile(imgPath, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    for (x, y, w, h), name in res:
 
-res = recognize_faces("C:\\Users\\Асмодей\\Desktop\\img_recgn_tests\\check2.jpg",
-                      "C:\\Users\\Асмодей\\Desktop\\img_recgn_tests\\db")
-img = cv2.imdecode(np.fromfile("C:\\Users\\Асмодей\\Desktop\\img_recgn_tests\\check2.jpg", dtype=np.uint8),
-                   cv2.IMREAD_UNCHANGED)
-rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-for (x, y, w, h), name in res:
-    cv2.rectangle(img, (h, w), (y, x), (0, 255, 0), 2)
-    cv2.putText(img, name, (h + 2, w + 20), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0, 255, 0), 2)
-cv2.imshow("Frame", img)
-cv2.waitKey(0)
+        if name == '???' and show_unknown:
+            cv2.rectangle(img, (h, w), (y, x), (255, 0, 0), 2)
+            cv2.putText(img, name, (h + 2, w + 20), cv2.FONT_HERSHEY_COMPLEX, 0.75, (255, 0, 0), 2)
+        elif name != '???':
+            cv2.rectangle(img, (h, w), (y, x), (0, 255, 0), 2)
+            cv2.putText(img, name, (h + 2, w + 20), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0, 255, 0), 2)
+    return img
+
+
