@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton,\
     QFileDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QGridLayout, QCheckBox
 from PyQt6.QtGui import QIcon, QPixmap, QImage
 from PyQt6.QtCore import Qt
+import threading
 
 from recognition import getImage
 
@@ -73,7 +74,7 @@ class MainWindow(QMainWindow):
 
     def initToolbar(self):
         button_recgn = QPushButton("Начать распознавание")
-        button_recgn.clicked.connect(self.recognize)
+        button_recgn.clicked.connect(self.start_recogn_thread)
         checkbox_unknown = QCheckBox("Выделять неизвестных")
         checkbox_unknown.stateChanged.connect(self.check)
 
@@ -87,13 +88,19 @@ class MainWindow(QMainWindow):
         self.centralWidget().setDisabled(True)
 
         img_data = getImage(self.imgpath, self.pathTextLine.text(), self.showUnknown)
+
         h, w, c = img_data.shape
+
         image = PixmapContainer(QImage(img_data.data, w, h, w * 3, QImage.Format.Format_RGB888))
         self.centralWidget().layout().replaceWidget(self.image, image)
         self.image.deleteLater()
         self.image = image
 
         self.centralWidget().setDisabled(False)
+
+    def start_recogn_thread(self):
+        th = threading.Thread(target=self.recognize)
+        th.start()
 
     def check(self, state):
         if self.sender().isChecked():
