@@ -1,9 +1,8 @@
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, \
-    QFileDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QGridLayout, QCheckBox
+    QFileDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QGridLayout, QCheckBox, QMessageBox
 from PyQt6.QtGui import QIcon, QPixmap, QImage
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import numpy as np
-# import threading
 
 from recognition import getImage
 
@@ -59,7 +58,6 @@ class MainWindow(QMainWindow):
         button_dir.clicked.connect(self.getDirectory)
         button_img = QPushButton("Фото")
         button_img.clicked.connect(self.openfile)
-        # button_img.setMaximumWidth(int(self.pathTextLine.size().width() * 0.6))
 
         grid = QGridLayout()
         grid.setSpacing(10)
@@ -93,20 +91,33 @@ class MainWindow(QMainWindow):
 
         image = PixmapContainer(QImage(img_data.data, w, h, w * 3, QImage.Format.Format_RGB888))
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.centralWidget().layout().replaceWidget(self.image, image)
-        self.image.deleteLater()
-        self.image = image
+        self.updateImage(image)
         self.centralWidget().setDisabled(False)
 
 
     def start_recogn_thread(self):
-        self.centralWidget().setDisabled(True)
-        self.worker = Worker(self.imgpath, self.pathTextLine.text(), self.showUnknown)
-        self.worker.beep.connect(self.drawFaces)
-        self.worker.start()
+        if self.pathTextLine.text() == '':
+            error = QMessageBox(self)
+            error.setWindowTitle('Ошибка')
+            error.setText('Необходимо выбрать папку с известными изображениями')
+            error.setInformativeText('Для корректной работы на каждой фотографии должно быть не более 1 человек\nПустая папка допускается, как и папка с посторонними файлами')
+            error.setIcon(QMessageBox.Icon.Warning)
+            error.setStandardButtons(QMessageBox.StandardButton.Ok)
+            error.exec()
+        elif self.imgpath is None:
+            error = QMessageBox(self)
+            error.setWindowTitle('Ошибка')
+            error.setText('Необходимо выбрать изображение для распознавания')
+            error.setIcon(QMessageBox.Icon.Warning)
+            error.setStandardButtons(QMessageBox.StandardButton.Ok)
+            error.exec()
+        else:
+            self.centralWidget().setDisabled(True)
+            self.worker = Worker(self.imgpath, self.pathTextLine.text(), self.showUnknown)
+            self.worker.beep.connect(self.drawFaces)
+            self.worker.start()
 
-        # th = threading.Thread(target=self.recognize)
-        # th.start()
+
 
     def check(self, state):
         if self.sender().isChecked():
@@ -118,15 +129,29 @@ class MainWindow(QMainWindow):
         dirlist = QFileDialog.getExistingDirectory(self, "Выбрать папку", ".")
         self.pathTextLine.setText(dirlist)
 
+    def updateImage(self, new_image):
+        self.centralWidget().layout().replaceWidget(self.image, new_image)
+        self.image.deleteLater()
+        self.image = new_image
+
     def openfile(self):
         fname = QFileDialog.getOpenFileName(
             self,
             'Выберите фото для распознавания',
             '.',
-            "Supported files (*.png;*.jpg;*.bmp);;PNG Files (*.png);;JPG Files (*.jpg);;BMP File (*.bmp)"
+            "Supported files (*.png;*.jpeg;*.jpg;*.bmp);;PNG Files (*.png);;JPG Files (*.jpg;*.jpeg);;BMP File (*.bmp)"
         )[0]
-        if not fname.endswith(('.png', '.jpg', '.jpeg', '.bmp')):
-            # прописать уведомление о некорректном типе файла/недоступном
+        if not fname:
+            return
+        elif not fname.endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+            # уведомление о некорректном типе файла
+            error = QMessageBox(self)
+            error.setWindowTitle('Ошибка')
+            error.setText('Выбранный Вами тип файла не поддерживается')
+            error.setInformativeText("Поддерживаемые файлы: (*.png;*.jpeg;*.jpg;*.bmp)")
+            error.setIcon(QMessageBox.Icon.Warning)
+            error.setStandardButtons(QMessageBox.StandardButton.Ok)
+            error.exec()
             return
         # сохраняем путь к фотографии в специальное поле (для глобальной логики)
         self.imgpath = fname
@@ -134,9 +159,7 @@ class MainWindow(QMainWindow):
         image = PixmapContainer(fname)
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.centralWidget().layout().replaceWidget(self.image, image)
-        self.image.deleteLater()
-        self.image = image
+        self.updateImage(image)
 
 
 class Worker(QThread):
@@ -156,7 +179,7 @@ class Worker(QThread):
     def run(self):
         self.beep.emit(getImage(self.imgpath, self.dirpath, self.shwunkn))
 
-
+# самый мейн мы оборачиваем в try где прога будет падать с окном о неизвестной ошибке пожалуйста свяжитесь с разработчиком для хотфикса и полный код питоновской ошибки
 app = QApplication([])
 window = MainWindow()
 window.show()
