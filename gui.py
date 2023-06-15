@@ -1,10 +1,12 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton,\
+from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, \
     QFileDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QGridLayout, QCheckBox
 from PyQt6.QtGui import QIcon, QPixmap, QImage
-from PyQt6.QtCore import Qt
-import threading
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+import numpy as np
+# import threading
 
 from recognition import getImage
+
 
 class PixmapContainer(QLabel):
     def __init__(self, pixmap, parent=None):
@@ -13,9 +15,11 @@ class PixmapContainer(QLabel):
         self.setMinimumSize(256, 256)  # needed to be able to scale down the image
 
     def resizeEvent(self, event):
-        w = min(self.width(), self._pixmap.width())
-        h = min(self.height(), self._pixmap.height())
+        w = self.width()
+        h = self.height()
+        # растяжение изображения по размеру окна как доп. параметр?
         self.setPixmap(self._pixmap.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio))
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -55,7 +59,7 @@ class MainWindow(QMainWindow):
         button_dir.clicked.connect(self.getDirectory)
         button_img = QPushButton("Фото")
         button_img.clicked.connect(self.openfile)
-        #button_img.setMaximumWidth(int(self.pathTextLine.size().width() * 0.6))
+        # button_img.setMaximumWidth(int(self.pathTextLine.size().width() * 0.6))
 
         grid = QGridLayout()
         grid.setSpacing(10)
@@ -84,23 +88,25 @@ class MainWindow(QMainWindow):
         l.addStretch()
         return l
 
-    def recognize(self):
-        self.centralWidget().setDisabled(True)
-
-        img_data = getImage(self.imgpath, self.pathTextLine.text(), self.showUnknown)
-
-        h, w, c = img_data.shape
+    def drawFaces(self, img_data):
+        h, w, _ = img_data.shape
 
         image = PixmapContainer(QImage(img_data.data, w, h, w * 3, QImage.Format.Format_RGB888))
+        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.centralWidget().layout().replaceWidget(self.image, image)
         self.image.deleteLater()
         self.image = image
-
         self.centralWidget().setDisabled(False)
 
+
     def start_recogn_thread(self):
-        th = threading.Thread(target=self.recognize)
-        th.start()
+        self.centralWidget().setDisabled(True)
+        self.worker = Worker(self.imgpath, self.pathTextLine.text(), self.showUnknown)
+        self.worker.beep.connect(self.drawFaces)
+        self.worker.start()
+
+        # th = threading.Thread(target=self.recognize)
+        # th.start()
 
     def check(self, state):
         if self.sender().isChecked():
@@ -120,7 +126,7 @@ class MainWindow(QMainWindow):
             "Supported files (*.png;*.jpg;*.bmp);;PNG Files (*.png);;JPG Files (*.jpg);;BMP File (*.bmp)"
         )[0]
         if not fname.endswith(('.png', '.jpg', '.jpeg', '.bmp')):
-            #прописать уведомление о некорректном типе файла/недоступном
+            # прописать уведомление о некорректном типе файла/недоступном
             return
         # сохраняем путь к фотографии в специальное поле (для глобальной логики)
         self.imgpath = fname
@@ -133,6 +139,22 @@ class MainWindow(QMainWindow):
         self.image = image
 
 
+class Worker(QThread):
+
+    beep = pyqtSignal(np.ndarray)
+
+    def __init__(self, imgpath, dirpath, shwunkn, parent=None):
+        super(self.__class__, self).__init__(parent)
+        self.running = True
+        self.imgpath = imgpath
+        self.dirpath = dirpath
+        self.shwunkn = shwunkn
+
+    def stop(self):
+        self.running = False
+
+    def run(self):
+        self.beep.emit(getImage(self.imgpath, self.dirpath, self.shwunkn))
 
 
 app = QApplication([])
