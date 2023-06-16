@@ -23,18 +23,17 @@ class PixmapContainer(QLabel):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.setWindowTitle("Распознавание лиц")
-        self.setWindowIcon(QIcon('.\\visual\\icon.png'))
+        self.setWindowIcon(QIcon('./visual/icon.png'))
 
         self.imgpath = None
         self.pathTextLine = QLineEdit("", )
         self.pathTextLine.setEnabled(False)
         self.showUnknown = False
 
-        # возможно некое анонимное изображение до выбора конкретного
-        # вероятно запуск программы на анонимном изображении запрещен
-        self.image = QLabel()
+        # анонимное изображение, запуск программы на анонимном изображении запрещен
+        self.image = PixmapContainer('./visual/anon_img.png')
+        self.image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         dir_layout = self.initDirLayout()
         tool_layout = self.initToolbar()
@@ -179,8 +178,4 @@ class Worker(QThread):
     def run(self):
         self.beep.emit(getImage(self.imgpath, self.dirpath, self.shwunkn))
 
-# самый мейн мы оборачиваем в try где прога будет падать с окном о неизвестной ошибке пожалуйста свяжитесь с разработчиком для хотфикса и полный код питоновской ошибки
-app = QApplication([])
-window = MainWindow()
-window.show()
-app.exec()
+
