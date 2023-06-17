@@ -12,19 +12,20 @@ import numpy as np
 # cv2.waitKey(0)
 
 
-def recognize_faces(check_img_path, database_folder_path):
+def recognize_faces(check_img_path, database_folder_path, model='small'):
     """
-            Сравнивает фотографию, к которой указан путь, со всеми лицами с фотографий из выбранной папки
+        Сравнивает фотографию, к которой указан путь, со всеми лицами с фотографий из выбранной папки
 
-            :param check_img_path: путь к изображению для проверки
-            :param database_folder_path: путь к папке с изображениями из БД
-            :return: Массив пар (box, name)
-        """
+        :param check_img_path: str, путь к изображению для проверки
+        :param database_folder_path: str, путь к папке с изображениями из БД
+        :param model: str, используемая модель (small | large), large более медленная и точная
+        :return: Массив пар (box, name)
+    """
     img = cv2.imdecode(np.fromfile(check_img_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
     # конвертация в формат RGB для модели
     check_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     check_img_boxes = face_recognition.face_locations(check_img)
-    check_img_points = face_recognition.face_encodings(check_img, check_img_boxes)
+    check_img_points = face_recognition.face_encodings(check_img, check_img_boxes, model=model)
 
     result = [(i, '???') for i in check_img_boxes]
     # цикл по папке с фото
@@ -38,7 +39,7 @@ def recognize_faces(check_img_path, database_folder_path):
                               cv2.IMREAD_UNCHANGED)
         db_img = cv2.cvtColor(db_bgr, cv2.COLOR_BGR2RGB)
         db_img_box = face_recognition.face_locations(db_img)
-        db_img_points = face_recognition.face_encodings(db_img, db_img_box)
+        db_img_points = face_recognition.face_encodings(db_img, db_img_box, model=model)
         if not db_img_points:
             continue
         else:
@@ -52,10 +53,19 @@ def recognize_faces(check_img_path, database_folder_path):
 
     return result
 
-def getImage(imgPath, dirPath, show_unknown=False):
-    print(imgPath, dirPath, show_unknown, sep='\n')
-    res = recognize_faces(imgPath, dirPath)
-    img = cv2.imdecode(np.fromfile(imgPath, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+
+def getImage(img_path, dir_path, show_unknown=False, model='small'):
+    """
+            Выполняет вызов recognize_faces и выделяет известные и (опционально) неизвестные лица с подписями.
+
+            :param img_path: str, путь к изображению для проверки
+            :param dir_path: str, путь к папке с изображениями из БД
+            :param show_unknown: bool, выделять ли неизвестные лица
+            :param model: str, используемая модель (small | large), large более медленная и точная
+            :return: стандартное cv2 изображение с размеченными лицами
+    """
+    res = recognize_faces(img_path, dir_path, model=model)
+    img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     for (x, y, w, h), name in res:
 

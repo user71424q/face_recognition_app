@@ -1,17 +1,26 @@
 from gui import MainWindow
 from PyQt6.QtWidgets import QApplication, QMessageBox
+import sys
 
 
-# самый мейн мы оборачиваем в try где прога будет падать с окном о неизвестной ошибке пожалуйста свяжитесь с разработчиком для хотфикса и полный код питоновской ошибки
-try:
-    app = QApplication([])
-    window = MainWindow()
-    window.show()
-    app.exec()
-except Exception as e:
-    print(e)
+def my_excepthook(type, value, tback):
+    """
+            Внешний перехват всех необработанных исключений и вызов окна критической ошибки
+
+    """
     fatal_error = QMessageBox()
     fatal_error.setIcon(QMessageBox.Icon.Critical)
     fatal_error.setWindowTitle('Критическая ошибка')
     fatal_error.setText('Произошла непредвиденная ошибка')
+    fatal_error.setInformativeText('Требуется перезапуск приложения')
     fatal_error.exec()
+    QApplication([]).exec()
+
+
+sys.excepthook = my_excepthook
+
+app = QApplication([])
+window = MainWindow()
+window.show()
+app.exec()
+

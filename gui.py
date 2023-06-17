@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, \
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, \
     QFileDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QGridLayout, QCheckBox, QMessageBox
 from PyQt6.QtGui import QIcon, QPixmap, QImage
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -8,6 +8,9 @@ from recognition import getImage
 
 
 class PixmapContainer(QLabel):
+    """
+            Класс, наследующий QLabel с модификацией для масштабирования изображения
+    """
     def __init__(self, pixmap, parent=None):
         super(PixmapContainer, self).__init__(parent)
         self._pixmap = QPixmap(pixmap)
@@ -16,7 +19,6 @@ class PixmapContainer(QLabel):
     def resizeEvent(self, event):
         w = self.width()
         h = self.height()
-        # растяжение изображения по размеру окна как доп. параметр?
         self.setPixmap(self._pixmap.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio))
 
 
@@ -30,6 +32,7 @@ class MainWindow(QMainWindow):
         self.pathTextLine = QLineEdit("", )
         self.pathTextLine.setEnabled(False)
         self.showUnknown = False
+        self.model = 'small'
 
         # анонимное изображение, запуск программы на анонимном изображении запрещен
         self.image = PixmapContainer('./visual/anon_img.png')
@@ -78,18 +81,24 @@ class MainWindow(QMainWindow):
         button_recgn.clicked.connect(self.start_recogn_thread)
         checkbox_unknown = QCheckBox("Выделять неизвестных")
         checkbox_unknown.stateChanged.connect(self.check)
-
+        checkbox_altModel = QCheckBox("Более точное и долгое распознавание")
+        checkbox_altModel.stateChanged.connect(self.modelSwitch)
         l = QVBoxLayout()
         l.addWidget(checkbox_unknown)
+        l.addWidget(checkbox_altModel)
         l.addWidget(button_recgn)
         l.addStretch()
         return l
 
     def drawFaces(self, img_data):
+        """
+            Конвертация cv2 изображения в PixmapContainer и обновление изображения в gui
+
+            :param img_data: стандартное cv2 изображение (RGB)
+        """
         h, w, _ = img_data.shape
 
         image = PixmapContainer(QImage(img_data.data, w, h, w * 3, QImage.Format.Format_RGB888))
-        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.updateImage(image)
         self.centralWidget().setDisabled(False)
 
@@ -111,12 +120,14 @@ class MainWindow(QMainWindow):
             error.setStandardButtons(QMessageBox.StandardButton.Ok)
             error.exec()
         else:
-            self.centralWidget().setDisabled(True)
-            self.worker = Worker(self.imgpath, self.pathTextLine.text(), self.showUnknown)
+            #self.centralWidget().setDisabled(True)
+            load = PixmapContainer('./visual/loading.gif', parent=self.image)
+            load.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            #load.setText('Обработка...')
+            load.show()
+            self.worker = Worker(self.imgpath, self.pathTextLine.text(), self.showUnknown, self.model)
             self.worker.beep.connect(self.drawFaces)
             self.worker.start()
-
-
 
     def check(self, state):
         if self.sender().isChecked():
@@ -124,11 +135,23 @@ class MainWindow(QMainWindow):
         else:
             self.showUnknown = False
 
+    def modelSwitch(self, state):
+        if self.sender().isChecked():
+            self.model = 'large'
+        else:
+            self.model = 'small'
+
     def getDirectory(self):
         dirlist = QFileDialog.getExistingDirectory(self, "Выбрать папку", ".")
         self.pathTextLine.setText(dirlist)
 
     def updateImage(self, new_image):
+        """
+            Обновление изображения в gui
+
+            :param new_image: экземпляр QImage или производного от него класса
+        """
+        new_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.centralWidget().layout().replaceWidget(self.image, new_image)
         self.image.deleteLater()
         self.image = new_image
@@ -154,28 +177,27 @@ class MainWindow(QMainWindow):
             return
         # сохраняем путь к фотографии в специальное поле (для глобальной логики)
         self.imgpath = fname
-
         image = PixmapContainer(fname)
-        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         self.updateImage(image)
 
 
 class Worker(QThread):
+    """
+            Класс, представляющий отдельный поток для запуска распознавания
 
+            Вызывает метод getImage из модуля recognition при запуске
+            Возвращает изображение по окончанию расчета с помощью сигнала beep
+    """
     beep = pyqtSignal(np.ndarray)
 
-    def __init__(self, imgpath, dirpath, shwunkn, parent=None):
+    def __init__(self, imgpath, dirpath, shwunkn, model, parent=None):
         super(self.__class__, self).__init__(parent)
-        self.running = True
         self.imgpath = imgpath
         self.dirpath = dirpath
         self.shwunkn = shwunkn
-
-    def stop(self):
-        self.running = False
+        self.model = model
 
     def run(self):
-        self.beep.emit(getImage(self.imgpath, self.dirpath, self.shwunkn))
+        self.beep.emit(getImage(self.imgpath, self.dirpath, self.shwunkn, self.model))
 
 
