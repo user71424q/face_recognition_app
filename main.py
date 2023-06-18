@@ -1,3 +1,5 @@
+import traceback
+
 from gui import MainWindow
 from PyQt6.QtWidgets import QApplication, QMessageBox
 import sys
@@ -12,7 +14,8 @@ def my_excepthook(type, value, tback):
     fatal_error.setIcon(QMessageBox.Icon.Critical)
     fatal_error.setWindowTitle('Критическая ошибка')
     fatal_error.setText('Произошла непредвиденная ошибка')
-    fatal_error.setInformativeText('Требуется перезапуск приложения')
+    fatal_error.setInformativeText(str(value) + '\nТребуется перезапуск приложения')
+    fatal_error.setDetailedText(str(value))
     fatal_error.exec()
     QApplication([]).exec()
 

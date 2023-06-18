@@ -96,11 +96,25 @@ class MainWindow(QMainWindow):
 
             :param img_data: стандартное cv2 изображение (RGB)
         """
-        h, w, _ = img_data.shape
 
-        image = PixmapContainer(QImage(img_data.data, w, h, w * 3, QImage.Format.Format_RGB888))
-        self.updateImage(image)
-        self.centralWidget().setDisabled(False)
+        if img_data.shape == ():
+            # уведомление о некорректном типе файла
+            error = QMessageBox(self)
+            error.setWindowTitle('Ошибка')
+            error.setText('Произошло перемещение/удаление одного из обрабатываемых файлов')
+            error.setInformativeText("Повторите попытку")
+            error.setIcon(QMessageBox.Icon.Warning)
+            error.setStandardButtons(QMessageBox.StandardButton.Ok)
+            self.imgpath = None
+            self.updateImage(PixmapContainer('./visual/anon_img.png'))
+            error.exec()
+        else:
+            h, w, _ = img_data.shape
+            image = PixmapContainer(QImage(img_data.data, w, h, w * 3, QImage.Format.Format_RGB888))
+            self.updateImage(image)
+
+        for button in self.centralWidget().findChildren(QPushButton):
+            button.setDisabled(False)
 
 
     def start_recogn_thread(self):
@@ -121,10 +135,16 @@ class MainWindow(QMainWindow):
             error.exec()
         else:
             #self.centralWidget().setDisabled(True)
-            load = PixmapContainer('./visual/loading.gif', parent=self.image)
-            load.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            #load.setText('Обработка...')
-            load.show()
+            #self.centralWidget().findChild(QPushButton, 'btnrecg').setDisabled(True)
+            for button in self.centralWidget().findChildren(QPushButton):
+                button.setDisabled(True)
+
+            # сообщение об обработке
+            lay = QVBoxLayout(self.image)
+            loadlabel = QLabel("Обработка...")
+            loadlabel.setStyleSheet("background-color: gainsboro; padding: 4px 10px;")
+            lay.addWidget(loadlabel, alignment=Qt.AlignmentFlag.AlignCenter)
+
             self.worker = Worker(self.imgpath, self.pathTextLine.text(), self.showUnknown, self.model)
             self.worker.beep.connect(self.drawFaces)
             self.worker.start()
@@ -198,6 +218,9 @@ class Worker(QThread):
         self.model = model
 
     def run(self):
-        self.beep.emit(getImage(self.imgpath, self.dirpath, self.shwunkn, self.model))
+        try:
+            self.beep.emit(getImage(self.imgpath, self.dirpath, self.shwunkn, self.model))
+        except:
+            self.beep.emit(np.ndarray([]))
 
 
