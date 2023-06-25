@@ -15,7 +15,6 @@ def my_excepthook(type, value, tback):
     fatal_error.setWindowTitle('Критическая ошибка')
     fatal_error.setText('Произошла непредвиденная ошибка')
     fatal_error.setInformativeText(str(value) + '\nТребуется перезапуск приложения')
-    fatal_error.setDetailedText(str(value))
     fatal_error.exec()
     QApplication([]).exec()
 
