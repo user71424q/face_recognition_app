@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
         button_dir = QPushButton("Обзор")
         button_dir.clicked.connect(self.getDirectory)
         button_img = QPushButton("Фото")
-        button_img.clicked.connect(self.openfile)
+        button_img.clicked.connect(self.openFile)
 
         grid = QGridLayout()
         grid.setSpacing(10)
@@ -78,11 +78,11 @@ class MainWindow(QMainWindow):
 
     def initToolbar(self):
         button_recgn = QPushButton("Начать распознавание")
-        button_recgn.clicked.connect(self.start_recogn_thread)
+        button_recgn.clicked.connect(self.startRecognThread)
         checkbox_unknown = QCheckBox("Выделять неизвестных")
-        checkbox_unknown.stateChanged.connect(self.check)
+        checkbox_unknown.stateChanged.connect(self.switchUnknown)
         checkbox_altModel = QCheckBox("Более точное и долгое распознавание")
-        checkbox_altModel.stateChanged.connect(self.modelSwitch)
+        checkbox_altModel.stateChanged.connect(self.switchModel)
         l = QVBoxLayout()
         l.addWidget(checkbox_unknown)
         l.addWidget(checkbox_altModel)
@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
             button.setDisabled(False)
 
 
-    def start_recogn_thread(self):
+    def startRecognThread(self):
         if self.pathTextLine.text() == '':
             error = QMessageBox(self)
             error.setWindowTitle('Ошибка')
@@ -149,13 +149,13 @@ class MainWindow(QMainWindow):
             self.worker.beep.connect(self.drawFaces)
             self.worker.start()
 
-    def check(self, state):
+    def switchUnknown(self, state):
         if self.sender().isChecked():
             self.showUnknown = True
         else:
             self.showUnknown = False
 
-    def modelSwitch(self, state):
+    def switchModel(self, state):
         if self.sender().isChecked():
             self.model = 'large'
         else:
@@ -176,7 +176,7 @@ class MainWindow(QMainWindow):
         self.image.deleteLater()
         self.image = new_image
 
-    def openfile(self):
+    def openFile(self):
         fname = QFileDialog.getOpenFileName(
             self,
             'Выберите фото для распознавания',

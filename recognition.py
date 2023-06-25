@@ -12,7 +12,7 @@ import numpy as np
 # cv2.waitKey(0)
 
 
-def recognize_faces(check_img_path, database_folder_path, model='small'):
+def recognizeFaces(check_img_path, database_folder_path, model='small'):
     """
         Сравнивает фотографию, к которой указан путь, со всеми лицами с фотографий из выбранной папки
 
@@ -64,7 +64,7 @@ def getImage(img_path, dir_path, show_unknown=False, model='small'):
             :param model: str, используемая модель (small | large), large более медленная и точная
             :return: стандартное cv2 изображение с размеченными лицами
     """
-    res = recognize_faces(img_path, dir_path, model=model)
+    res = recognizeFaces(img_path, dir_path, model=model)
     img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     for (x, y, w, h), name in res:
